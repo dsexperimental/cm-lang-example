@@ -2,6 +2,10 @@
   funcall,
   if,
   else,
+  repeat,
+  while,
+  for,
+  in,
   elem @left,
   infix @left,
   exp @left,
@@ -84,10 +88,14 @@ FuncDef { functionKwd ParamList !funbody expression }
 
 IfExpr { ifKwd "(" expression ")" !if expression (elseKwd !else expression)? }
 
+RepeatExpr { repeatKwd !repeat expression }
+WhileExpr { whileKwd "(" expression ")" !while expression }
+ForExpr { forKwd "(" Identifier  inKwd !in expression ")" !for expression }
+
 Block { "{" !block  expression* "}" }
 
 call {
-  StdCall | FuncDef | IfExpr | Block
+  StdCall | FuncDef | IfExpr | RepeatExpr | WhileExpr | ForExpr | Block
 }
 
 Identifier { word }
