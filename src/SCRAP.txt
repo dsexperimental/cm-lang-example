@@ -1,0 +1,77 @@
+@top Script { expression* }
+
+@skip { space | newLine | LineComment }
+
+@precedence {
+  Assignment @right
+}
+
+expression {
+  literal |
+  symbol |
+  call |
+  Block { "{" expression* "}" }
+}
+
+@tokens {
+  space[@export] { $[ \t]+ }
+  newLine[@export] { $[\r\n]+ }
+
+  Identifier { $[a-zA-Z_\-0-9]+ }
+
+  String { '"' (!["\\] | "\\" _)* '"' }
+
+  Boolean { "TRUE" | "FALSE" }
+
+  Numeric {
+    @digit |
+    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? |
+    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? |
+    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+
+  }
+
+  Integer {
+    @digit+ "."? "L" |
+    "0" $[xX] $[0-9a-fA-F]+ "L" |
+    @digit+ (("e" | "E") ("+" | "-")? @digit+)? "L"
+  }
+
+  Complex {
+    @digit "i" |
+    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? "i" |
+    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? "i" |
+    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+ "i"
+  }
+
+  LineComment { "#" ![\n]* }
+
+  "(" ")"
+
+  "<-" [@name=AssignOp,@export]
+
+  @precedence { space newline AssignOp}
+}
+
+literal { String | Boolean | Numeric | Complex | Integer }
+
+operator { AssignOp }
+
+symbol { Identifier | operator }
+
+Assignment { expression "<-" expression }
+StdCall { Symbol ArgList}
+FunctionDef { "function" ParamList expression}
+
+call {
+  Assignment | StdCall | FunctionDef
+}
+
+kw<term> { @specialize[@name={term}]<Symbol, term> }
+
+commaSep<x> { "" | x ("," x)* }
+
+ParamList { "(" commaSep< ((Identifier "=" )? expression)* > ")" }
+
+ArgList { "(" commaSep< ((Identifier "=" )? expression)* > ")" }
+
+@detectDelim
