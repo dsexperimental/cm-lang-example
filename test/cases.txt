@@ -1,41 +1,51 @@
 # Booleans
 
-#t
-#f
+34
 
 ==>
 
-Program(Boolean, Boolean)
+Script(Number)
 
 # Identifiers
 
-one
-Two_Three
+abc
+hgkj
 
 ==>
 
-Program(Identifier, Identifier)
+Script(Identifier, Identifier)
 
-# Strings
+#math op
 
-"hello"
-"one\"\\two"
-
-==>
-
-Program(String, String)
-
-# Applications
-
-(begin
-  (when #t
-    (print (concat "hello" " " "world")))
-  (print "DONE"))
+4 + 6
+5 + 7 * 3
 
 ==>
 
-Program(Application(
-  Identifier,
-  Application(Identifier, Boolean, Application(
-    Identifier, Application(Identifier, String, String, String)))
-  Application(Identifier, String)))
+Script(BinaryExpression(Number,"+",Number),BinaryExpression(Number,"+",BinaryExpression(Number,"*",Number)))
+
+# if
+
+if(c == d) x <- x + 1 else x <- x - 1
+
+==>
+
+Script(
+  IfExpr(
+    if,
+    BinaryExpression(Identifier,"==",Identifier),
+    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Number)),
+    else,
+    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"-",Number))
+  )
+)
+
+#function
+
+foo(4,t=7)
+
+==>
+
+Script(
+    StdCall(Identifier,ArgList(ArgValue(Number),ArgValue(Identifier,"=",Number)))
+)

@@ -1,12 +1,4 @@
 @precedence {
-  funcall,
-  if,
-  else,
-  repeat,
-  while,
-  for,
-  in,
-  elem @left,
   infix @left,
   exp @left,
   seq @left
@@ -20,33 +12,17 @@
   rassign @left,
   lassign @right,
   eqassign @right,
+  subset @left,
+  if,
+  else @right,
+  repeat,
+  while,
+  for,
+  in,
+  funcall,
   help @left,
-  expr @left,
   funbody,
   block
-}
-
-@skip { space |   Comment }
-
-@top Script { expression* }
-
-expression {
-  ( Identifier | Number | BinaryExpression | call | DotNum) !expr
-}
-
-
-BinaryExpression { 
-  expression !seq ":" expression |
-  expression !times ( "*" | "/" ) expression |
-  expression !plus ( "+" | "-" ) expression |
-  expression !exp "^" expression |
-  expression !infix Infix expression |
-  expression !comp ( "<" | ">" | ">=" | "<=" | "==" | "!=" ) expression |
-  expression !and ( "&" | "&&" ) expression |
-  expression !or ( "|" | "||" ) expression |
-  expression !lassign ( "<-" | "<<-" ) expression |
-  expression !rassign ( "->" | "->>" ) expression |
-  expression !elem "$" expression
 }
 
 kw<term> { @specialize[@name={term}]<word, term> }
@@ -78,6 +54,31 @@ dots3Kwd { kw<"..3"> }
 dots4Kwd { kw<"..4"> }
 dots5Kwd { kw<"..5"> }
 
+@skip { space | Comment }
+
+@top Script { expression* }
+
+expression {
+  ( Identifier | Number | BinaryExpression | call | DotNum)
+}
+
+BinaryExpression { 
+  expression !seq ":" expression |
+  expression !times ( "*" | "/" ) expression |
+  expression !plus ( "+" | "-" ) expression |
+  expression !exp "^" expression |
+  expression !infix Infix expression |
+  expression !comp ( "<" | ">" | ">=" | "<=" | "==" | "!=" ) expression |
+  expression !and ( "&" | "&&" ) expression |
+  expression !or ( "|" | "||" ) expression |
+  expression !lassign ( "<-" | "<<-" ) expression |
+  expression !rassign ( "->" | "->>" ) expression
+}
+
+Subset { expression !subset (( "$" Identifier) | ("[" commaSep<expression> "]" ) | ("[[" commaSep<expression> "]]" )) }
+
+Member { Identifier ( "::" | ":::" ) Identifier }
+
 ArgValue { (Identifier "=" )? expression }
 ArgList { "(" commaSep<ArgValue> ")" }
 StdCall { expression !funcall ArgList }
@@ -86,7 +87,7 @@ ParamValue { Identifier ("=" expression)? | "..." }
 ParamList { "(" commaSep<ParamValue> ")" }
 FuncDef { functionKwd ParamList !funbody expression }
 
-IfExpr { ifKwd "(" expression ")" !if expression (elseKwd !else expression)? }
+IfExpr { ifKwd "(" expression ")" !if expression (!else elseKwd expression)? }
 
 RepeatExpr { repeatKwd !repeat expression }
 WhileExpr { whileKwd "(" expression ")" !while expression }
@@ -94,16 +95,22 @@ ForExpr { forKwd "(" Identifier  inKwd !in expression ")" !for expression }
 
 Block { "{" !block  expression* "}" }
 
+ParenthesizedExpression { "(" expression ")" }
+
 call {
-  StdCall | FuncDef | IfExpr | RepeatExpr | WhileExpr | ForExpr | Block
+  StdCall | Subset | FuncDef | IfExpr | RepeatExpr | WhileExpr | ForExpr | Block
 }
 
-Identifier { word }
+Identifier { word |  backtickString }
+
+Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8| infix9 }
 
 @tokens {
   space { @whitespace+ }
   word { @asciiLetter+ }
   Number { @digit+ }
+
+  backtickString { "`" ![\n]* "`" }
 
   Comment { "#" ![\n]* }
   
@@ -117,8 +124,6 @@ Identifier { word }
   infix7 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
   infix8 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
   infix9 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
-
-  Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8| infix9 }
 
   ":"
   "*" "/"
