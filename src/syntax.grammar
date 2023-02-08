@@ -1,6 +1,7 @@
 @precedence {
   member @left,
   subset @left,
+  funcall @left,
   exp @left,
   sign @right,
   seq @left,
@@ -21,9 +22,8 @@
   while,
   for,
   in,
-  funcall,
   funbody,
-  help @left,
+  help,
   block
 }
 
@@ -52,7 +52,7 @@ nacharKwd { kw<"NA_character_"> }
 
 @skip { space | Comment }
 
-@top Script { expression* }
+@top Script { ( expression ";"? )* }
 
 expression {
    literal | Identifier | call 
@@ -68,10 +68,10 @@ Identifier {
 
 call {
   UnaryExpression | BinaryExpression | 
-  Subset | Member | Formula
+  Subset | Member | Formula |
   StdCall | FuncDef | 
   IfExpr | RepeatExpr | WhileExpr | ForExpr | 
-  Block | ParenthesizedExpression
+  Block | ParenExpression
 }
 
 UnaryExpression {
@@ -110,12 +110,12 @@ FuncDef { functionKwd ParamList !funbody expression }
 IfExpr { ifKwd "(" expression ")" !if expression (!else elseKwd expression)? }
 
 RepeatExpr { repeatKwd !repeat expression }
-WhileExpr { whileKwd "(" expression ")" !while expression }
+WhileExpr { whileKwd ParenExpression !while expression }
 ForExpr { forKwd "(" Identifier  inKwd !in expression ")" !for expression }
 
 Block { "{" !block  expression* "}" }
 
-ParenthesizedExpression { "(" expression ")" }
+ParenExpression { "(" expression ")" }
 
 Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8| infix9 }
 

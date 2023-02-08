@@ -32,10 +32,10 @@ if(c == d) x <- x + 1 else x <- x - 1
 
 Script(
   IfExpr(
-    if,
+    "if",
     BinaryExpression(Identifier,"==",Identifier),
     BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Numeric)),
-    else,
+    "else",
     BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"-",Numeric))
   )
 )
