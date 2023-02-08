@@ -4,7 +4,7 @@
 
 ==>
 
-Script(Number)
+Script(Numeric)
 
 # Identifiers
 
@@ -22,7 +22,7 @@ Script(Identifier, Identifier)
 
 ==>
 
-Script(BinaryExpression(Number,"+",Number),BinaryExpression(Number,"+",BinaryExpression(Number,"*",Number)))
+Script(BinaryExpression(Numeric,"+",Numeric),BinaryExpression(Numeric,"+",BinaryExpression(Numeric,"*",Numeric)))
 
 # if
 
@@ -34,9 +34,9 @@ Script(
   IfExpr(
     if,
     BinaryExpression(Identifier,"==",Identifier),
-    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Number)),
+    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Numeric)),
     else,
-    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"-",Number))
+    BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"-",Numeric))
   )
 )
 
@@ -47,5 +47,5 @@ foo(4,t=7)
 ==>
 
 Script(
-    StdCall(Identifier,ArgList(ArgValue(Number),ArgValue(Identifier,"=",Number)))
+    StdCall(Identifier,ArgList(ArgValue(Numeric),ArgValue(Identifier,"=",Numeric)))
 )

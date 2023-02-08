@@ -1,7 +1,10 @@
 @precedence {
-  infix @left,
+  member @left,
+  subset @left,
   exp @left,
-  seq @left
+  sign @right,
+  seq @left,
+  infix @left,
   times @left,
   plus @left,
   comp @left,
@@ -12,7 +15,6 @@
   rassign @left,
   lassign @right,
   eqassign @right,
-  subset @left,
   if,
   else @right,
   repeat,
@@ -20,12 +22,12 @@
   for,
   in,
   funcall,
-  help @left,
   funbody,
+  help @left,
   block
 }
 
-kw<term> { @specialize[@name={term}]<word, term> }
+kw<term> { @specialize[@name={term}]<simpleName, term> }
 commaSep<x> { "" | x ("," x)* }
 
 ifKwd { kw<"if"> }
@@ -47,22 +49,38 @@ naintKwd { kw<"NA_integer_"> }
 narealKwd { kw<"NA_real_"> }
 nacomplexKwd { kw<"NA_complex_"> }
 nacharKwd { kw<"NA_character_"> }
-dotsKwd { kw<"..."> }
-dots1Kwd { kw<"..1"> }
-dots2Kwd { kw<"..2"> }
-dots3Kwd { kw<"..3"> }
-dots4Kwd { kw<"..4"> }
-dots5Kwd { kw<"..5"> }
 
 @skip { space | Comment }
 
 @top Script { expression* }
 
 expression {
-  ( Identifier | Number | BinaryExpression | call | DotNum)
+   literal | Identifier | call 
+}
+
+literal { 
+  Character | Numeric | Integer | Boolean | Complex 
+}
+
+Identifier { 
+  simpleName | backtickName   
+}
+
+call {
+  UnaryExpression | BinaryExpression | 
+  Subset | Member | Formula
+  StdCall | FuncDef | 
+  IfExpr | RepeatExpr | WhileExpr | ForExpr | 
+  Block | ParenthesizedExpression
+}
+
+UnaryExpression {
+  !sign ( "+" | "-" ) expression
+  !not "!" expression
 }
 
 BinaryExpression { 
+  expression !seq "::" expression |
   expression !seq ":" expression |
   expression !times ( "*" | "/" ) expression |
   expression !plus ( "+" | "-" ) expression |
@@ -75,15 +93,17 @@ BinaryExpression {
   expression !rassign ( "->" | "->>" ) expression
 }
 
-Subset { expression !subset (( "$" Identifier) | ("[" commaSep<expression> "]" ) | ("[[" commaSep<expression> "]]" )) }
+Subset { expression !subset (( "$" Identifier) | ("[" commaSep<expression> "]" ) | ("[[" commaSep<expression> "]]" ) | ( "@" Identifier )) }
 
-Member { Identifier ( "::" | ":::" ) Identifier }
+Member { Identifier !member ( "::" | ":::" ) Identifier }
+
+Formula { expression? !frmla "~" expression}
 
 ArgValue { (Identifier "=" )? expression }
 ArgList { "(" commaSep<ArgValue> ")" }
 StdCall { expression !funcall ArgList }
 
-ParamValue { Identifier ("=" expression)? | "..." }
+ParamValue { Identifier ("=" expression)? }
 ParamList { "(" commaSep<ParamValue> ")" }
 FuncDef { functionKwd ParamList !funbody expression }
 
@@ -97,20 +117,47 @@ Block { "{" !block  expression* "}" }
 
 ParenthesizedExpression { "(" expression ")" }
 
-call {
-  StdCall | Subset | FuncDef | IfExpr | RepeatExpr | WhileExpr | ForExpr | Block
-}
-
-Identifier { word |  backtickString }
-
 Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8| infix9 }
 
 @tokens {
   space { @whitespace+ }
-  word { @asciiLetter+ }
-  Number { @digit+ }
 
-  backtickString { "`" ![\n]* "`" }
+  simpleName {
+    @asciiLetter+ |
+    (@asciiLetter | "_")+ ( @asciiLetter | @digit | "." | "_")* |
+    "." ( @asciiLetter | "_")? ( @asciiLetter | @digit | "." | "_")* |
+    ".." ![0-9] ( @asciiLetter | @digit | "." | "_")* |
+    "..." ( @asciiLetter | @digit | "." | "_")+ 
+  }
+
+  Character { 
+    '"' (!["\\] | "\\" _)* '"' 
+    "'" (!['\\] | '\\' _)* "'"
+    }
+
+  Boolean { "TRUE" | "FALSE" }
+
+  Numeric {
+    @digit |
+    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? |
+    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? |
+    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+
+  }
+
+  Integer {
+    @digit+ "."? "L" |
+    "0" $[xX] $[0-9a-fA-F]+ "L" |
+    @digit+ (("e" | "E") ("+" | "-")? @digit+)? "L"
+  }
+
+  Complex {
+    @digit+ "i" |
+    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? "i" |
+    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? "i" |
+    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+ "i"
+  }
+
+  backtickName { "`" ![\n]* "`" }
 
   Comment { "#" ![\n]* }
   
@@ -126,6 +173,8 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   infix9 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
 
   ":"
+  "::" ":::"
+  "@"
   "*" "/"
   "+" "-"
   "^"
@@ -135,8 +184,6 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   "->" "->>"
   "$"
   "="
-  "..."
-  DotNum { ".." @digit+ }
   "[" "]"
   "[[" "]]"
 
@@ -144,8 +191,22 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     infix0
     infix1,
     infix2,
-    word
-    Number,
+    infix3,
+    infix4,
+    infix5,
+    infix6,
+    infix7,
+    infix8,
+    infix9,
+    backtickName,
+    simpleName,
+    Boolean,
+    Character,
+    Complex,
+    Numeric,
+    Integer,
+    ":::",
+    "::",
     ":",
     "<<-",
     "<-",

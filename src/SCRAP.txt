@@ -1,3 +1,15 @@
+dotsKwd { kw<"..."> }
+dots1Kwd { kw<"..1"> }
+dots2Kwd { kw<"..2"> }
+dots3Kwd { kw<"..3"> }
+dots4Kwd { kw<"..4"> }
+dots5Kwd { kw<"..5"> }
+dots6Kwd { kw<"..6"> }
+dots7Kwd { kw<"..7"> }
+dots8Kwd { kw<"..8"> }
+dots9Kwd { kw<"..9"> }
+DotNum { dots1Kwd | dots2Kwd |  dots3Kwd | dots4Kwd | dots5Kwd | dots6Kwd | dots7Kwd | dots8Kwd | dots9Kwd }
+
 @top Script { expression* }
 
 @skip { space | newLine | LineComment }
@@ -14,12 +26,20 @@ expression {
 }
 
 @tokens {
-  space[@export] { $[ \t]+ }
-  newLine[@export] { $[\r\n]+ }
+  space { @whitespace+ }
 
-  Identifier { $[a-zA-Z_\-0-9]+ }
+  Identifier {
+    @asciiLetter+ |
+    (@asciiLetter | "_")+ ( @asciiLetter | @digit | "." | "_")* |
+    "." ( @asciiLetter | "_")? ( @asciiLetter | @digit | "." | "_")* |
+    ".." ![0-9] ( @asciiLetter | @digit | "." | "_")* |
+    "..." ( @asciiLetter | @digit | "." | "_")+ |
+  }
 
-  String { '"' (!["\\] | "\\" _)* '"' }
+  String { 
+    '"' (!["\\] | "\\" _)* '"' 
+    "'" (!['\\] | '\\' _)* "'"
+    }
 
   Boolean { "TRUE" | "FALSE" }
 
@@ -37,7 +57,7 @@ expression {
   }
 
   Complex {
-    @digit "i" |
+    @digit+ "i" |
     @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? "i" |
     @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? "i" |
     "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+ "i"
