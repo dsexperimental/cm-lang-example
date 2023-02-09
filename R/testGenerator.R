@@ -1,9 +1,15 @@
-convertTestFile <- function(testInFile,testOutFile) {
-  data <- paste(readLines(testInFile),collapse="\n")
+convertTestFile <- function() {
+  inFile <- choose.files(filters=Filters[c("input")])
+  if( !endsWith(inFile,".input") ) {
+    stop("Input file must be of the format '*.txt.input'")
+  }
+  outFile <- substring(inFile,0,nchar(inFile) - nchar(".input"))
+  
+  data <- paste(readLines(inFile),collapse="\n")
   codeIn <- stringr::str_extract_all(data,"#[^#]*")[[1]]
   parseOut <- sapply(codeIn,analyzeCode)
   tests <- paste(codeIn,"\n==>\n\n",parseOut,"\n\n",sep="")
-  writeLines(tests,testOutFile)
+  writeLines(tests,outFile)
 }
 
 analyzeCode <- function(codeText) {
