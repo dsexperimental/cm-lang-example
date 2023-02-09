@@ -1,26 +1,26 @@
 convertTestFile <- function(testInFile,testOutFile) {
   data <- paste(readLines(testInFile),collapse="\n")
   codeIn <- stringr::str_extract_all(data,"#[^#]*")[[1]]
-  parseOut <- sapply(testIn,analyzeCode)
-  tests <- paste(testIn,"\n==>\n\n",testOut,"\n\n",sep="")
+  parseOut <- sapply(codeIn,analyzeCode)
+  tests <- paste(codeIn,"\n==>\n\n",parseOut,"\n\n",sep="")
   writeLines(tests,testOutFile)
 }
 
 analyzeCode <- function(codeText) {
   exprs <- rlang::parse_exprs(codeText)
-  sapply(exprs,processExpr)
+  exprParseStrings <- sapply(exprs,processExpr)
+  sprintf("Script(%s)",paste(exprParseStrings,collapse=","))
 }
-
 
 processExpr <- function(astEntry) {
   astList = as.list(astEntry)
   
   if(rlang::is_syntactic_literal(astEntry)) {
-    ##no action
-    sprintf("(Literal,%s)",getEntryValue(astList))
+    getLiteralType(astList)
   }
   else if(rlang::is_symbol(astEntry)) {
-    sprintf("(Symbol,%s)",getEntryValue(astList))
+    #getSymbol(astList)
+    "Identifier"
   }
   else if(rlang::is_call(astEntry)) {
     getCallText(astList)
@@ -33,23 +33,137 @@ processExpr <- function(astEntry) {
   }
 }
 
-getEntryValue <- function(astList) {
+getLiteralType <- function(astList) {
+  type <- class(astList[[1]])
+  switch(type,
+         numeric="Numeric",
+         character="Character",
+         boolean="Boolean",
+         logical="Logical",
+         complex="Complex",
+         type)
+}
+
+getSymbol <- function(astList) {
   as.character(astList[[1]])
 }
 
 getCallText <- function(astList) {
-  callType <- getEntryValue(astList)
-  if(callType == "function") {
-    paramList <- getParamList(astList[[2]])
-    body <- processExpr(astList[[3]])
-    sprintf("FunctionDef(%s,%s)",paramList,body)
-  }
-  else if(length(astList) > 1) {
-    sprintf("StdCall(%s,%s)",processExpr(astList[[1]]),getArgList(tail(astList,-1)))
+  if(rlang::is_symbol(astList[[1]])) {
+    ## we are calling a function named by this symbo
+    callSymbol <- as.character(astList[[1]])
+    outputFunction <- getCallOutputFunction(callSymbol)
   }
   else {
-    sprintf("StdCall(%s)",processExpr(astList[[1]]))
+    ##we are calling a function we get from evaluating another function
+    callSymbol = NULL
+    outputFunction = NULL
   }
+  
+  if(!is.null(outputFunction)) {
+    argStringVector <- sapply(tail(astList,-1),processExpr)
+    outputFunction(callSymbol,argStringVector)
+  }
+  else if(identical(callSymbol,"function")) {
+    getFunctionDef(astList)
+  }
+  else {
+    getStdCall(astList)
+  }
+}
+
+##===============================
+## Convert the output to match our javscript test format
+##===============================
+
+getCallOutputFunction <- function(callSymbol) {
+  switch(callSymbol,
+         `+` = getUnaryBinary,
+         `-` = getUnaryBinary,
+         `!` = getUnaryBinary,
+         `::` = getBinary,
+         `:` = getBinary,
+         `*` = getBinary,
+         `/` = getBinary,
+         `^` = getBinary,
+         `<` = getBinary,
+         `>` = getBinary,
+         `<=` = getBinary,
+         `>=` = getBinary,
+         `==` = getBinary,
+         `!=` = getBinary,
+         `&` = getBinary,
+         `&&` = getBinary,
+         `|` = getBinary,
+         `||` = getBinary,
+         `<-` = getBinary,
+         `<<-` = getBinary,
+         `$` = getSubset,
+         `[` = getSubset,
+         `[[` = getSubset,
+         `@` =  getSubset,
+         `::`= getMember,
+         `:::`= getMember,
+         `~` = getFormula,
+         `if` = getIf,
+         `repeat` = getRepeat,
+         `while` = getWhile,
+         `for` = getFor,
+         `{` = getBlock,
+         `(` = getParen,
+         NULL
+  )
+}
+
+getUnaryBinary <- function(callSymbol,argStrings) {
+  parseType <- if(length(argStrings) == 1) "UnaryExpression" else "BinaryExpression"
+  getOperator(parseType,callSymbol,argStrings)
+} 
+
+getBinary <- function(callSymbol,argStrings) getOperator("BinaryExpression",callSymbol,argStrings)
+getSubset <- function(callSymbol,argStrings) getOperator("Subset",callSymbol,argStrings)
+getMember <- function(callSymbol,argStrings) getOperator("Member",callSymbol,argStrings)
+getFormula <- function(callSymbol,argStrings) getOperator("Formula",callSymbol,argStrings)
+getInfix <- function(callSymbol,argStrings) getOperator("INfix",callSymbol,argStrings)
+
+getIf <- function(callSymbol,argStrings) {
+  if(length(argStrings) > 2) {
+    sprintf('IfExpr("if",%s,%s,"else",%s)',argStrings[1],argStrings[2],argStrings[3])
+  }
+  else {
+    sprintf('IfExpr("if",%s,%s)',argStrings[1],argStrings[2])
+  }
+  
+}
+getRepeat <- function() ""
+getWhile <- function() ""
+getFor <- function() ""
+getBlock <- function() ""
+getParen <- function() ""
+
+
+getOperator <- function(parseType,callSymbol,argStrings) {
+  if(length(argStrings) == 1) {
+    ##unary operator
+    sprintf('%s(%s,"%s")',parseType,callSymbol,argStrings[1])
+  }
+  else  {
+    ##binary operator
+    sprintf('%s(%s,"%s",%s)',parseType,argStrings[1],callSymbol,argStrings[2])
+  }
+}
+
+getStdCall <- function(astList) {
+  ##either we have an identifier (passed) or we must get the expression string for the call
+  callExprString <- if(rlang::is_symbol(astList[[1]])) "Identifier" else processExpr(astList[[1]])
+  argListString <- if(length(astList) > 1) getArgList(tail(astList,-1)) else character(0)
+  sprintf("StdCall(%s,%s)",callExprString,argListString)
+}
+
+getFunctionDef <- function(astlist) {
+  paramListString <- getParamList(astList[[2]])
+  bodyString <- processExpr(astList[[3]])
+  sprintf("FunctionDef(%s,%s)",paramListString,bodyString)
 }
 
 ##Uggh!! need to fix these

@@ -59,7 +59,7 @@ expression {
 }
 
 literal { 
-  Character | Numeric | Integer | Boolean | Complex 
+  Character | Numeric | Integer | Logical | Complex 
 }
 
 Identifier { 
@@ -135,7 +135,7 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     "'" (!['\\] | '\\' _)* "'"
     }
 
-  Boolean { "TRUE" | "FALSE" }
+  Logical { "TRUE" | "FALSE" }
 
   Numeric {
     @digit |
@@ -200,7 +200,7 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     infix9,
     backtickName,
     simpleName,
-    Boolean,
+    Logical,
     Character,
     Complex,
     Numeric,
