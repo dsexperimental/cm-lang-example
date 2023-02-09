@@ -123,39 +123,26 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   space { @whitespace+ }
 
   simpleName {
-    @asciiLetter+ |
-    (@asciiLetter | "_")+ ( @asciiLetter | @digit | "." | "_")* |
-    "." ( @asciiLetter | "_")? ( @asciiLetter | @digit | "." | "_")* |
-    ".." ![0-9] ( @asciiLetter | @digit | "." | "_")* |
-    "..." ( @asciiLetter | @digit | "." | "_")+ 
+    ( @asciiLetter | "." ) ( (@asciiLetter | "." | "_") (@asciiLetter | @digit | "." | "_")* )?
   }
 
-  Character { 
-    '"' (!["\\] | "\\" _)* '"' 
-    "'" (!['\\] | '\\' _)* "'"
-    }
+  Character {
+    '"' ( ![\\\n"] | '\\' '"' )*  '"' |
+    "'" ( ![\\\n'] | "\\" "'" )*  "'"
+  }
 
   Logical { "TRUE" | "FALSE" }
 
-  Numeric {
-    @digit |
-    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? |
-    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? |
-    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+
+  number {
+    ( ( (@digit+ ( "." @digit* )? ) | ( "." @digit+ ) )  ( ("e" | "E") ("+" | "-")? @digit+ )? ) |
+    ( ( "0x" | "0X" )( @digit | $[a-fA-F] )+ ( "."? ( @digit | $[a-fA-F] )* ("p" | "P") ("+" | "-")? @digit+ )? )
   }
 
-  Integer {
-    @digit+ "."? "L" |
-    "0" $[xX] $[0-9a-fA-F]+ "L" |
-    @digit+ (("e" | "E") ("+" | "-")? @digit+)? "L"
-  }
+  Numeric { number }
 
-  Complex {
-    @digit+ "i" |
-    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? "i" |
-    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? "i" |
-    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+ "i"
-  }
+  Integer { number "L" }
+
+  Complex { number "i" }
 
   backtickName { "`" ![\n]* "`" }
 
@@ -199,12 +186,12 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     infix8,
     infix9,
     backtickName,
-    simpleName,
     Logical,
     Character,
     Complex,
-    Numeric,
     Integer,
+    Numeric,
+    simpleName,
     ":::",
     "::",
     ":",
