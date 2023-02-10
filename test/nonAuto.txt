@@ -62,7 +62,7 @@ Script(Integer)
 
 Script(Complex)
 
-# test2
+# Identifier
 
 fsadfsd
 rew583t
@@ -74,3 +74,37 @@ sdfs.345
 ==> 
 
 Script(Identifier,Identifier,Identifier,Identifier,Identifier,Identifier)
+
+# call
+
+function(a,d,c=6,...) 45
+if(TRUE) 45
+if(FALSE) 56 else 56
+repeat x <- x + 6
+while(TRUE) x <- 6
+for(entry in xxx) entry$h[[5]] <- 5
+x + y * 5;
+# Apparently I can do a comment in the script
+(x + y) * 5
+
+==>
+
+Script(
+    FuncDef("function",
+        ParamList(
+            ParamValue(Identifier),
+            ParamValue(Identifier),
+            ParamValue(Identifier,"=",Numeric),
+            ParamValue(Identifier)
+        ),
+        Numeric
+    ),
+    IfExpr("if",Logical,Numeric),
+    IfExpr("if",Logical,Numeric,"else",Numeric),
+    RepeatExpr("repeat",BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Numeric))),
+    WhileExpr("while",Logical,BinaryExpression(Identifier,"<-",Numeric)),
+    ForExpr("for",Identifier,"in",Identifier,BinaryExpression(Subset(Subset(Identifier,"$",Identifier),"[[",Numeric,"]]"),"<-",Numeric)),
+    BinaryExpression(Identifier,"+",BinaryExpression(Identifier,"*",Numeric)),
+    Comment()
+    BinaryExpression(ParenExpression(BinaryExpression(Identifier,"+",Identifier)),"*",Numeric)
+)
