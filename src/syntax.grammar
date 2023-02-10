@@ -124,7 +124,7 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   space { @whitespace+ }
 
   simpleName {
-    ( @asciiLetter | "." ) ( (@asciiLetter | "." | "_") (@asciiLetter | @digit | "." | "_")* )?
+    ( @asciiLetter | "." ) ( ( @asciiLetter | "." | "_" ) ( @asciiLetter | @digit | "." | "_" )* )?
   }
 
   Character {
