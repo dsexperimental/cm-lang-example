@@ -83,9 +83,7 @@ if(FALSE) 56 else 56
 repeat x <- x + 6
 while(TRUE) x <- 6
 for(entry in xxx) entry$h[[5]] <- 5
-x + y * 5;
 # Apparently I can do a comment in the script
-(x + y) * 5
 
 ==>
 
@@ -104,7 +102,17 @@ Script(
     RepeatExpr("repeat",BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Numeric))),
     WhileExpr("while",Logical,BinaryExpression(Identifier,"<-",Numeric)),
     ForExpr("for",Identifier,"in",Identifier,BinaryExpression(Subset(Subset(Identifier,"$",Identifier),"[[",Numeric,"]]"),"<-",Numeric)),
-    BinaryExpression(Identifier,"+",BinaryExpression(Identifier,"*",Numeric)),
     Comment()
+)
+
+# extra
+
+(x + y) * 5
+x + y * 5
+
+==>
+
+Script(
     BinaryExpression(ParenExpression(BinaryExpression(Identifier,"+",Identifier)),"*",Numeric)
+    BinaryExpression(Identifier,"+",BinaryExpression(Identifier,"*",Numeric)),
 )

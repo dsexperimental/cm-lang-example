@@ -1,4 +1,6 @@
 @precedence {
+  real @left,
+  maybe @left,
   member @left,
   subset @left,
   funcall @left,
@@ -51,16 +53,22 @@ narealKwd { kw<"NA_real_"> }
 nacomplexKwd { kw<"NA_complex_"> }
 nacharKwd { kw<"NA_character_"> }
 
-@skip { space | Comment }
+@skip { spaces | Comment }
 
-@top Script { ( expression ";"? )* }
+@top Script { ( expression !real exprDelim | newline )* }
+
+Block { "{" ( !block expression !real exprDelim | newline )* "}" }
+
+exprDelim { ";" | newline | eof }
 
 expression {
-   literal | Identifier | call 
+   literal | Identifier | call
 }
 
+nlsok { !maybe newline* }
+
 literal { 
-  Character | Numeric | Integer | Logical | Complex 
+  Character | Numeric | Integer | Logical | Complex
 }
 
 Identifier { 
@@ -68,63 +76,79 @@ Identifier {
 }
 
 call {
-  UnaryExpression | BinaryExpression | 
-  Subset | Member | Formula |
-  StdCall | FuncDef | 
-  IfExpr | RepeatExpr | WhileExpr | ForExpr | 
-  Block | ParenExpression
+    UnaryExpression | BinaryExpression | 
+    Subset | Member | Formula |
+    StdCall | FuncDef | 
+    IfExpr | RepeatExpr | WhileExpr | ForExpr | 
+    Block | ParenExpression
 }
 
 UnaryExpression {
-  !sign ( "+" | "-" ) expression
-  !not "!" expression
+  ( 
+    !sign ( "+" | "-" ) | 
+    !not "!"  
+  )
+  nlsok expression
 }
 
 BinaryExpression { 
-  expression !seq "::" expression |
-  expression !seq ":" expression |
-  expression !times ( "*" | "/" ) expression |
-  expression !plus ( "+" | "-" ) expression |
-  expression !exp "^" expression |
-  expression !infix Infix expression |
-  expression !comp ( "<" | ">" | ">=" | "<=" | "==" | "!=" ) expression |
-  expression !and ( "&" | "&&" ) expression |
-  expression !or ( "|" | "||" ) expression |
-  expression !lassign ( "<-" | "<<-" ) expression |
-  expression !rassign ( "->" | "->>" ) expression
+  expression (
+    !seq ":" |
+    !times ( "*" | "/" ) |
+    !plus ( "+" | "-" ) |
+    !exp "^" |
+    !infix Infix |
+    !comp ( "<" | ">" | ">=" | "<=" | "==" | "!=" ) |
+    !and ( "&" | "&&" ) |
+    !or ( "|" | "||" ) |
+    !lassign ( "<-" | "<<-" ) |
+    !rassign ( "->" | "->>" ) 
+  )
+  nlsok expression 
 }
 
-Subset { expression !subset (( "$" Identifier) | ("[" commaSep<expression> "]" ) | ("[[" commaSep<expression> "]]" ) | ( "@" Identifier )) }
+Subset { 
+  expression !subset 
+  ( 
+    ( "$" nlsok Identifier) |
+    ( "[" nlsok expression ( nlsok "," nlsok expression)* nlsok "]" ) |
+    ( "[[" nlsok expression ( nlsok "," nlsok expression)* nlsok "]]" ) |
+    ( "@" nlsok Identifier ) 
+  )
+}
 
-Member { Identifier !member ( "::" | ":::" ) Identifier }
+Member { Identifier !member ( "::" | ":::" ) nlsok Identifier }
 
-Formula { expression? !frmla "~" expression}
+Formula { expression? !frmla "~" nlsok expression }
 
 ArgValue { (Identifier "=" )? expression }
-ArgList { "(" commaSep<ArgValue> ")" }
+ArgList { "(" commaSep<ArgValue>  ")" }
 StdCall { expression !funcall ArgList }
 
-ParamValue { Identifier ("=" expression)? }
-ParamList { "(" commaSep<ParamValue> ")" }
-FuncDef { functionKwd ParamList !funbody expression }
+ParamValue { Identifier ( "="  expression)? }
+ParamList { "("  commaSep<ParamValue>  ")" }
+FuncDef { functionKwd  ParamList  !funbody expression }
 
-IfExpr { ifKwd "(" expression ")" !if expression (!else elseKwd expression)? }
+IfExpr { ifKwd nlsok "(" nlsok expression  nlsok ")" nlsok !if expression ( !else elseKwd nlsok expression)? } 
 
-RepeatExpr { repeatKwd !repeat expression }
-WhileExpr { whileKwd "(" expression ")" !while expression }
-ForExpr { forKwd "(" Identifier  inKwd !in expression ")" !for expression }
+RepeatExpr { repeatKwd nlsok !repeat expression }
+WhileExpr { whileKwd nlsok "(" nlsok expression nlsok ")" nlsok !while expression }
+ForExpr { forKwd nlsok "(" nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
 
-Block { "{" !block  expression* "}" }
+ParenExpression { !paren "(" nlsok expression nlsok ")" }
 
-ParenExpression { !paren "(" expression ")" }
-
-Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8| infix9 }
+Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
 
 @tokens {
-  space { @whitespace+ }
+  spaces[@export]  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
+  newline[@export]  { $[\r\n\u2028\u2029] }
+  eof { @eof }
+  identifierChar { @asciiLetter }
+
+  @precedence { spaces, newline, identifierChar }
 
   simpleName {
-    ( @asciiLetter | "." ) ( ( @asciiLetter | "." | "_" ) ( @asciiLetter | @digit | "." | "_" )* )?
+    ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
   }
 
   Character {
@@ -150,15 +174,15 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   Comment { "#" ![\n]* }
   
   infix0 { "%%" }
-  infix1 { "%" ![\s] "%" }
-  infix2 { "%" ![\s] ![\s] "%" }
-  infix3 { "%" ![\s] ![\s] ![\s]  "%" }
-  infix4 { "%" ![\s] ![\s] ![\s] ![\s] "%" }
-  infix5 { "%" ![\s] ![\s] ![\s] ![\s] ![\s]"%" }
-  infix6 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
-  infix7 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
-  infix8 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
-  infix9 { "%" ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] ![\s] "%" }
+  infix1 { "%" ![%] "%" }
+  infix2 { "%" ![%] ![%] "%" }
+  infix3 { "%" ![%] ![%] ![%]  "%" }
+  infix4 { "%" ![%] ![%] ![%] ![%] "%" }
+  infix5 { "%" ![%] ![%] ![%] ![%] ![%] "%" }
+  infix6 { "%" ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix7 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix8 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix9 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
 
   ":"
   "::" ":::"
@@ -216,3 +240,4 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     "]"
   }
 }
+
