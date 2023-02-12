@@ -33,12 +33,12 @@
 kw<term> { @specialize[@name={term}]<simpleName, term> }
 commaSep<x> { "" | x ("," x)* }
 
-ifKwd { kw<"if"> }
+ifKwd[@export] { kw<"if"> }
 elseKwd { kw<"else"> }
 repeatKwd { kw<"repeat"> }
-whileKwd { kw<"while"> }
-functionKwd { kw<"function"> }
-forKwd { kw<"for"> }
+whileKwd[@export] { kw<"while"> }
+functionKwd[@export] { kw<"function"> }
+forKwd[@export] { kw<"for"> }
 inKwd { kw<"in"> }
 nextKwd { kw<"next"> }
 breakKwd { kw<"break"> }
@@ -53,19 +53,19 @@ narealKwd { kw<"NA_real_"> }
 nacomplexKwd { kw<"NA_complex_"> }
 nacharKwd { kw<"NA_character_"> }
 
-@skip { spaces | Comment }
+@skip { spaces | Comment | snl }
 
-@top Script { ( expression !real exprDelim | newline )* }
+@top Script { ( expression !real exprDelim | hnl )* }
 
-Block { "{" ( !block expression !real exprDelim | newline )* "}" }
+Block { openBrace ( !block expression !real exprDelim | hnl )* closeBrace }
 
-exprDelim { ";" | newline | eof }
+exprDelim { ";" | hnl | eof }
 
 expression {
    literal | Identifier | call
 }
 
-nlsok { !maybe newline* }
+nlsok { !maybe hnl* }
 
 literal { 
   Character | Numeric | Integer | Logical | Complex
@@ -111,8 +111,8 @@ Subset {
   expression !subset 
   ( 
     ( "$" nlsok Identifier) |
-    ( "[" nlsok expression ( nlsok "," nlsok expression)* nlsok "]" ) |
-    ( "[[" nlsok expression ( nlsok "," nlsok expression)* nlsok "]]" ) |
+    ( openBrack nlsok expression ( nlsok "," nlsok expression)* nlsok closeBrack ) |
+    ( openDBrack nlsok expression ( nlsok "," nlsok expression)* nlsok closeDBrack ) |
     ( "@" nlsok Identifier ) 
   )
 }
@@ -122,26 +122,36 @@ Member { Identifier !member ( "::" | ":::" ) nlsok Identifier }
 Formula { expression? !frmla "~" nlsok expression }
 
 ArgValue { (Identifier "=" )? expression }
-ArgList { "(" commaSep<ArgValue>  ")" }
+ArgList { openParen commaSep<ArgValue>  closeParen }
 StdCall { expression !funcall ArgList }
 
 ParamValue { Identifier ( "="  expression)? }
-ParamList { "("  commaSep<ParamValue>  ")" }
+ParamList { openParen  commaSep<ParamValue>  closeParen }
 FuncDef { functionKwd  ParamList  !funbody expression }
 
-IfExpr { ifKwd nlsok "(" nlsok expression  nlsok ")" nlsok !if expression ( !else elseKwd nlsok expression)? } 
+IfExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
 
 RepeatExpr { repeatKwd nlsok !repeat expression }
-WhileExpr { whileKwd nlsok "(" nlsok expression nlsok ")" nlsok !while expression }
-ForExpr { forKwd nlsok "(" nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
+WhileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
+ForExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
 
-ParenExpression { !paren "(" nlsok expression nlsok ")" }
+ParenExpression { !paren openParen nlsok expression nlsok closeParen }
 
 Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
 
 @tokens {
   spaces[@export]  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
   newline[@export]  { $[\r\n\u2028\u2029] }
+
+  openBrace[@export] { "{" }
+  closeBrace[@export] { "}" }
+  openBrack[@export] { "[" }
+  closeBrack[@export] { "]" }
+  openDBrack[@export] { "[[" }
+  closeDBrack[@export] { "]]" }
+  openParen[@export] { "(" }
+  closeParen[@export] { ")" }
+
   eof { @eof }
   identifierChar { @asciiLetter }
 
@@ -196,8 +206,6 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   "->" "->>"
   "$"
   "="
-  "[" "]"
-  "[[" "]]"
 
   @precedence {
     infix0
@@ -234,10 +242,14 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     "||",
     "&",
     "|",
-    "[[",
-    "]]",
-    "[",
-    "]"
+    openDBrack,
+    openBrack,
+    closeDBrack,
+    closeBrack
   }
 }
+
+@context trackDelims from "./tokens.js"
+@external specialize {newline} replaceNewline from "./tokens" { hnl snl }
+
 
