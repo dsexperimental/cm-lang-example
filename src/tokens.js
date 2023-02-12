@@ -18,7 +18,7 @@ class ContextState {
   }
 
   canPopWith(delimiter) {
-    if(parent == null) return false
+    if(this.parent == null) return false
     switch(this.delimiter) {
       case openBrace: return delimiter == closeBrace
       case openParen: return delimiter == closeParen

@@ -89,19 +89,14 @@ for(entry in xxx) entry$h[[5]] <- 5
 
 Script(
     FuncDef("function",
-        ParamList(
-            ParamValue(Identifier),
-            ParamValue(Identifier),
-            ParamValue(Identifier,"=",Numeric),
-            ParamValue(Identifier)
-        ),
+        ParamList(Identifier,Identifier,Identifier,"=",Numeric,Identifier),
         Numeric
     ),
     IfExpr("if",Logical,Numeric),
     IfExpr("if",Logical,Numeric,"else",Numeric),
     RepeatExpr("repeat",BinaryExpression(Identifier,"<-",BinaryExpression(Identifier,"+",Numeric))),
     WhileExpr("while",Logical,BinaryExpression(Identifier,"<-",Numeric)),
-    ForExpr("for",Identifier,"in",Identifier,BinaryExpression(Subset(Subset(Identifier,"$",Identifier),"[[",Numeric,"]]"),"<-",Numeric)),
+    ForExpr("for",Identifier,"in",Identifier,BinaryExpression(Index(Component(Identifier,"$",Identifier),"[[",Numeric),"<-",Numeric)),
     Comment()
 )
 
