@@ -77,83 +77,69 @@ Identifier {
 }
 
 call {
-    UnaryExpression | BinaryExpression | 
-    Component | Index | Member | Formula |
-    StdCall | FuncDef | 
-    IfExpr | RepeatExpr | WhileExpr | ForExpr | 
-    Block | ParenExpression
+    UnaryExpr | BinaryExpr| ControlExpr | IndexExpr |
+    StdCall | FuncDef |
+    Block | ParenExpr
 }
 
-UnaryExpression {
-  ( 
-    !sign ( "+" | "-" ) | 
-    !not "!"  
-  )
-  nlsok expression
+ParenExpr { !paren openParen nlsok expression nlsok closeParen }
+
+UnaryExpr {
+    !sign ArithOp< "+" | "-" > nlsok expression | 
+    !not LogicOp< "!" > nlsok expression |
+    !frmla GenOp< "~" > nlsok expression 
 }
 
-BinaryExpression { 
-  expression (
-    !seq ":" |
-    !times ( "*" | "/" ) |
-    !plus ( "+" | "-" ) |
-    !exp "^" |
-    !infix Infix |
-    !comp ( "<" | ">" | ">=" | "<=" | "==" | "!=" ) |
-    !and ( "&" | "&&" ) |
-    !or ( "|" | "||" ) |
-    !lassign ( "<-" | "<<-" ) |
-    !rassign ( "->" | "->>" ) 
-  )
-  nlsok expression 
+BinaryExpr { 
+    expression !seq GenOp< ":" > nlsok expression |
+    expression !times ArithOp< "*" | "/" > nlsok expression |
+    expression !plus ArithOp< "+" | "-" > nlsok expression |
+    expression !exp ArithOp< "^" > nlsok expression |
+    expression !infix GenOp< infix > nlsok expression |
+    expression !comp CompOp< "<" | ">" | ">=" | "<=" | "==" | "!=" > nlsok expression |
+    expression !and LogicOp< "&" | "&&" > nlsok expression |
+    expression !or LogicOp< "|" | "||" > nlsok expression |
+    expression !lassign AssignOp< "<-" | "<<-" > nlsok expression |
+    expression !rassign AssignOp< "->" | "->>" > nlsok expression |
+    expression !frmla GenOp< "~" > nlsok expression | 
+    expression !compon GenOp< "$" | "@" > nlsok ( Identifier | Character ) |
+    Identifier !member GenOp< "::" | ":::" > nlsok Identifier
 }
 
-Component { 
-  expression !compon ( "$" | "@" ) nlsok ( Identifier | Character )
+ArithOp<expr> { expr }
+CompOp<expr> { expr }
+LogicOp<expr> { expr }
+AssignOp<expr> { expr }
+GenOp<expr> { expr }
+
+IndexExpr {
+  expression !index openBrack nlsok expression ( nlsok "," nlsok expression )* nlsok closeBrack |
+  expression !index openDBrack nlsok expression ( nlsok "," nlsok expression )* nlsok closeDBrack
 }
 
-Index {
-  expression !index (
-    ( openBrack nlsok expression ( nlsok "," nlsok expression)* nlsok closeBrack ) |
-    ( openDBrack nlsok expression ( nlsok "," nlsok expression)* nlsok closeDBrack )
-  )
-}
-
-Member { Identifier !member ( "::" | ":::" ) nlsok Identifier }
-
-Formula { expression? !frmla "~" nlsok expression }
-
-argValue { (Identifier "=" )? expression }
-ArgList { openParen commaSep<argValue>  closeParen }
+ArgValue { (Identifier "=" )? expression }
+ArgList { openParen commaSep<ArgValue>  closeParen }
 StdCall { expression !funcall ArgList }
 
-paramValue { Identifier ( "="  expression)? }
-ParamList { openParen  commaSep<paramValue>  closeParen }
+ParamValue { Identifier ( "="  expression)? }
+ParamList { openParen  commaSep<ParamValue>  closeParen }
 FuncDef { functionKwd  ParamList  !funbody expression }
 
-IfExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
+ifExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
 
-RepeatExpr { repeatKwd nlsok !repeat expression }
-WhileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
-ForExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
+repeatExpr { repeatKwd nlsok !repeat expression }
+whileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
+forExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
 
-ParenExpression { !paren openParen nlsok expression nlsok closeParen }
+ControlExpr {
+  ifExpr | repeatExpr | whileExpr | forExpr
+}
 
-Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
+infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
 
 @tokens {
   spaces[@export]  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
   newline[@export]  { $[\r\n\u2028\u2029] }
-
-  openBrace[@export] { "{" }
-  closeBrace[@export] { "}" }
-  openBrack[@export, @name="[" ] { "[" }
-  closeBrack[@export] { "]" }
-  openDBrack[@export, @name="[[" ] { "[[" }
-  closeDBrack[@export] { "]]" }
-  openParen[@export] { "(" }
-  closeParen[@export] { ")" }
-
   eof { @eof }
   identifierChar { @asciiLetter }
 
@@ -196,18 +182,26 @@ Infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   infix8 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
   infix9 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
 
+  openBrace[@export] { "{" }
+  closeBrace[@export] { "}" }
+  openBrack[@export, @name="[" ] { "[" }
+  closeBrack[@export, @name="]"] { "]" }
+  openDBrack[@export, @name="[[" ] { "[[" }
+  closeDBrack[@export, @name="]]"] { "]]" }
+  openParen[@export] { "(" }
+  closeParen[@export] { ")" }
+
   ":"
   "::" ":::"
-  "@"
+  "$" "@"
   "*" "/"
   "+" "-"
   "^"
+  "!"
+  "~"
   "<" ">" ">=" "<=" "==" "!="
   "&" "&&" "|" "||"
-  "<-" "<<-"
-  "->" "->>"
-  "$"
-  "="
+  "<-" "<<-" "->" "->>" "="
 
   @precedence {
     infix0
