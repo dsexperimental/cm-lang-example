@@ -1,6 +1,6 @@
 @precedence {
-  real @left,
-  maybe @left,
+  xend @left,
+  xmid @left,
   member @left,
   compon @left,
   index @left,
@@ -32,7 +32,6 @@
 }
 
 kw<term> { @specialize[@name={term}]<simpleName, term> }
-commaSep<x> { "" | x ("," x)* }
 
 ifKwd[@export] { kw<"if"> }
 elseKwd { kw<"else"> }
@@ -56,17 +55,25 @@ nacharKwd { kw<"NA_character_"> }
 
 @skip { spaces | Comment | snl }
 
-@top Script { ( expression !real exprDelim | hnl )* }
+lineCell { ( expression ";"? )+ !xend hnl }
+ScriptLineCell { lineCell }
+ScriptEndCell { ( expression ";"? )+ eof }
+scriptEnd { eof }
 
-Block { openBrace ( !block expression !real exprDelim | hnl )* closeBrace }
+BlockLineCell { lineCell }
+BlockEndCell { ( expression ";"? )+ closeBrace }
+blockEnd { closeBrace }
+BlockCell { blockLineCell | blockCell }
 
-exprDelim { ";" | hnl | eof }
+@top Script { ( ScriptLineCell | hnl )* (ScriptEndCell | scriptEnd) }
+
+Block { openBrace ( BlockLineCell | hnl )* (BlockEndCell | blockEnd) }
+
+nlsok { !xmid hnl* }
 
 expression {
    literal | Identifier | call
 }
-
-nlsok { !maybe hnl* }
 
 literal { 
   Character | Numeric | Integer | Logical | Complex
@@ -112,18 +119,25 @@ LogicOp<expr> { expr }
 AssignOp<expr> { expr }
 GenOp<expr> { expr }
 
+EmptyArgValue { ~emptylist ~emptyvalue }
+ArgValue { ~emptyvalue ( Identifier "=" )? expression }
+EmptyArgList { ~emptylist }
+ArgList { 
+  ArgValue ( "," ( ArgValue | EmptyArgValue) )*  | 
+  EmptyArgValue  ( "," ( ArgValue | EmptyArgValue) )+  
+}
+StdCall { expression !funcall openParen ( EmptyArgList | ArgList ) closeParen }
+
 IndexExpr {
-  expression !index openBrack nlsok expression ( nlsok "," nlsok expression )* nlsok closeBrack |
-  expression !index openDBrack nlsok expression ( nlsok "," nlsok expression )* nlsok closeDBrack
+  expression !index openBrack ( EmptyArgList | ArgList ) closeBrack |
+  expression !index openDBrack ( EmptyArgList | ArgList ) closeDBrack
 }
 
-ArgValue { (Identifier "=" )? expression }
-ArgList { openParen commaSep<ArgValue>  closeParen }
-StdCall { expression !funcall ArgList }
+commaSep<x> { "" | x ( "," x)* }
 
-ParamValue { Identifier ( "="  expression)? }
-ParamList { openParen  commaSep<ParamValue>  closeParen }
-FuncDef { functionKwd  ParamList  !funbody expression }
+ParamValue { Identifier ( "=" expression)? }
+ParamList { commaSep<ParamValue>  }
+FuncDef { functionKwd openParen ParamList closeParen !funbody expression }
 
 ifExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
 
