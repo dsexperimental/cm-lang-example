@@ -119,18 +119,16 @@ LogicOp<expr> { expr }
 AssignOp<expr> { expr }
 GenOp<expr> { expr }
 
-EmptyArgValue { ~emptylist ~emptyvalue }
+EmptyArg { ~emptyvalue }
 ArgValue { ~emptyvalue ( Identifier "=" )? expression }
-EmptyArgList { ~emptylist }
 ArgList { 
-  ArgValue ( "," ( ArgValue | EmptyArgValue) )*  | 
-  EmptyArgValue  ( "," ( ArgValue | EmptyArgValue) )+  
+  ( ArgValue | EmptyArg ) ( "," ( ArgValue | EmptyArg) )*  
 }
-StdCall { expression !funcall openParen ( EmptyArgList | ArgList ) closeParen }
+StdCall { expression !funcall openParen ArgList closeParen }
 
 IndexExpr {
-  expression !index openBrack ( EmptyArgList | ArgList ) closeBrack |
-  expression !index openDBrack ( EmptyArgList | ArgList ) closeDBrack
+  expression !index openBrack ArgList closeBrack |
+  expression !index openDBrack ArgList closeDBrack
 }
 
 commaSep<x> { "" | x ( "," x)* }
