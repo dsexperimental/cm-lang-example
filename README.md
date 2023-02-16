@@ -1,21 +1,33 @@
-# CodeMirror 6 language package template
+# Infinite Loop
 
-This is an example repository containing a minimal [CodeMirror](https://codemirror.net/6/) language support package. The idea is to clone it, rename it, and edit it to create support for a new language.
+I apologize for how ugly the code and grammar is here. I saved this because it triggered a crash in code mirror
+at a line in the _reduce_ function of _lezer-parser/lr/src/stack.ts_
 
-Things you'll need to do (see the [language support example](https://codemirror.net/6/examples/lang-package/) for a more detailed tutorial):
+The grammar is I mess because I was in the process of learning. I ended up in a situation below where _base_ < 0, and the 
+code below went into an infinite loop.
 
- * `git grep EXAMPLE` and replace all instances with your language name.
+I saved this in case you were interested in reproducing it.
 
- * Rewrite the grammar in `src/syntax.grammar` to cover your language. See the [Lezer system guide](https://lezer.codemirror.net/docs/guide/#writing-a-grammar) for information on this file format.
+        while (this.stack.length > base)
+            this.stack.pop();
 
- * Adjust the metadata in `src/index.ts` to work with your new grammar.
+I am not using this grammar file so I do _not_ need to work out what is wrong with it, if it is doing something wrong to cause this error.
 
- * Adjust the grammar tests in `test/cases.txt`.
+# To reproduce:
 
- * Build (`npm run prepare`) and test (`npm test`).
+ - Download repository
+ - Install and run
+    - npm install
+    - npm run prepare
+    - npm start
+ - Open url in a browser: http://localhost:8888/web/index.html
+ - Do the following edit
 
- * Rewrite this readme file.
+Original content in editor:
 
- * Optionally add a license.
+    while(TRUE) 5 + 6 * 5
 
- * Publish. Put your package on npm under a name like `codemirror-lang-EXAMPLE`.
+Place cursor before the _*_ and press return, which should make the editor look like: (but for me it goes into the infinite loop) 
+
+    while(TRUE) 5 + 6 
+    * 5

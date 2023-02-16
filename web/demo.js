@@ -1,4 +1,4 @@
-import { EditorView, basicSetup, EXAMPLE } from "codemirror-lang-EXAMPLE"
+import { EditorView, basicSetup, EXAMPLE } from "../dist/index.js"
 window.view = new EditorView({
     doc: 'while(TRUE) 5 + 6 * 5',
     extensions: [
