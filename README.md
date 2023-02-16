@@ -15,8 +15,8 @@ I am not using this grammar file so I do _not_ need to work out what is wrong wi
 
 # To reproduce:
 
- - Download repository
- - Install and run
+ - Download the _crash_ branch of this repository
+ - Install and run, from the repo root
     - npm install
     - npm run prepare
     - npm start
