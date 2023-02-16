@@ -2,6 +2,7 @@ import {parser} from "./syntax.grammar"
 import {LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp, foldInside, delimitedIndent, indentRange} from "@codemirror/language"
 import {styleTags, tags as t} from "@lezer/highlight"
 
+export { EditorView, basicSetup } from "codemirror"
 export const EXAMPLELanguage = LRLanguage.define({
   parser: parser.configure({
     props: [

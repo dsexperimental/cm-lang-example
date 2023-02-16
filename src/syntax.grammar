@@ -1,6 +1,29 @@
+kw<term> { @specialize[@name={term}]<simpleName, term> }
+
+ifKwd[@export] { kw<"if"> }
+elseKwd { kw<"else"> }
+repeatKwd { kw<"repeat"> }
+whileKwd[@export] { kw<"while"> }
+functionKwd[@export] { kw<"function"> }
+forKwd[@export] { kw<"for"> }
+inKwd { kw<"in"> }
+nextKwd { kw<"next"> }
+breakKwd { kw<"break"> }
+trueKwd { kw<"TRUE"> }
+falseKwd { kw<"FALSE"> }
+nullKwd { kw<"NULL"> }
+infKwd { kw<"Inf"> }
+nanKwd { kw<"NaN"> }
+naKwd { kw<"NA"> }
+naintKwd { kw<"NA_integer_"> }
+narealKwd { kw<"NA_real_"> }
+nacomplexKwd { kw<"NA_complex_"> }
+nacharKwd { kw<"NA_character_"> }
+
 @precedence {
-  xend @left,
-  xmid @left,
+  exprnl @left,
+  gennl @left,
+  dummynl @left,
   member @left,
   compon @left,
   index @left,
@@ -28,52 +51,70 @@
   funbody,
   paren,
   help,
-  block
+  dummy @left
 }
 
-kw<term> { @specialize[@name={term}]<simpleName, term> }
+@skip { spaces | Comment }
 
-ifKwd[@export] { kw<"if"> }
-elseKwd { kw<"else"> }
-repeatKwd { kw<"repeat"> }
-whileKwd[@export] { kw<"while"> }
-functionKwd[@export] { kw<"function"> }
-forKwd[@export] { kw<"for"> }
-inKwd { kw<"in"> }
-nextKwd { kw<"next"> }
-breakKwd { kw<"break"> }
-trueKwd { kw<"TRUE"> }
-falseKwd { kw<"FALSE"> }
-nullKwd { kw<"NULL"> }
-infKwd { kw<"Inf"> }
-nanKwd { kw<"NaN"> }
-naKwd { kw<"NA"> }
-naintKwd { kw<"NA_integer_"> }
-narealKwd { kw<"NA_real_"> }
-nacomplexKwd { kw<"NA_complex_"> }
-nacharKwd { kw<"NA_character_"> }
+nlsok { ( !gennl newline )* }
+nls { ( !gennl newline )+ }
 
-@skip { spaces | Comment | snl }
+semiTermExpr { expression ";" }
+nlTermExpr { expression newline }
+braceTermExpr { expression "}" }
+eofTermExpr  { expression eof }
 
-lineCell { ( expression ";"? )+ !xend hnl }
-ScriptLineCell { lineCell }
-ScriptEndCell { ( expression ";"? )+ eof }
-scriptEnd { eof }
+@top Script { 
+  ( semiTermExpr | !exprnl nlTermExpr | nls )* 
+  ( eofTermExpr | eof )
+}
 
-BlockLineCell { lineCell }
-BlockEndCell { ( expression ";"? )+ closeBrace }
-blockEnd { closeBrace }
-BlockCell { blockLineCell | blockCell }
+Block {
+  ~blockcheck
+  openBrace 
+  ( semiTermExpr | !exprnl nlTermExpr | nls )* 
+  ( braceTermExpr | closeBrace )
+}
 
-@top Script { ( ScriptLineCell | hnl )* (ScriptEndCell | scriptEnd) }
+ParenExpr { 
+  ~parencheck 
+  openParen nlsok expression nlsok closeParen
+}
 
-Block { openBrace ( BlockLineCell | hnl )* (BlockEndCell | blockEnd) }
 
-nlsok { !xmid hnl* }
+
+UnaryExpr {
+    !sign "+" nlsok expression 
+}
+
+BinaryExpr { 
+    (expression | !gennl nlTermExpr nlsok ) !plus "+" nlsok expression |
+    (expression | !gennl nlTermExpr nlsok ) !times "*" nlsok expression
+}
+
+ArithOp<expr> { expr }
+CompOp<expr> { expr }
+LogicOp<expr> { expr }
+AssignOp<expr> { expr }
+GenOp<expr> { expr }
+
+
+
+whileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
+
+
 
 expression {
-   literal | Identifier | call
+   literal | Identifier | call 
 }
+
+call {
+    UnaryExpr | BinaryExpr |
+    Block | whileExpr |
+    ParenExpr
+}
+
+
 
 literal { 
   Character | Numeric | Integer | Logical | Complex
@@ -83,79 +124,16 @@ Identifier {
   simpleName | backtickName   
 }
 
-call {
-    UnaryExpr | BinaryExpr| ControlExpr | IndexExpr |
-    StdCall | FuncDef |
-    Block | ParenExpr
-}
-
-ParenExpr { !paren openParen nlsok expression nlsok closeParen }
-
-UnaryExpr {
-    !sign ArithOp< "+" | "-" > nlsok expression | 
-    !not LogicOp< "!" > nlsok expression |
-    !frmla GenOp< "~" > nlsok expression 
-}
-
-BinaryExpr { 
-    expression !seq GenOp< ":" > nlsok expression |
-    expression !times ArithOp< "*" | "/" > nlsok expression |
-    expression !plus ArithOp< "+" | "-" > nlsok expression |
-    expression !exp ArithOp< "^" > nlsok expression |
-    expression !infix GenOp< infix > nlsok expression |
-    expression !comp CompOp< "<" | ">" | ">=" | "<=" | "==" | "!=" > nlsok expression |
-    expression !and LogicOp< "&" | "&&" > nlsok expression |
-    expression !or LogicOp< "|" | "||" > nlsok expression |
-    expression !lassign AssignOp< "<-" | "<<-" > nlsok expression |
-    expression !rassign AssignOp< "->" | "->>" > nlsok expression |
-    expression !frmla GenOp< "~" > nlsok expression | 
-    expression !compon GenOp< "$" | "@" > nlsok ( Identifier | Character ) |
-    Identifier !member GenOp< "::" | ":::" > nlsok Identifier
-}
-
-ArithOp<expr> { expr }
-CompOp<expr> { expr }
-LogicOp<expr> { expr }
-AssignOp<expr> { expr }
-GenOp<expr> { expr }
-
-EmptyArg { ~emptyvalue }
-ArgValue { ~emptyvalue ( Identifier "=" )? expression }
-ArgList { 
-  ( ArgValue | EmptyArg ) ( "," ( ArgValue | EmptyArg) )*  
-}
-StdCall { expression !funcall openParen ArgList closeParen }
-
-IndexExpr {
-  expression !index openBrack ArgList closeBrack |
-  expression !index openDBrack ArgList closeDBrack
-}
-
-commaSep<x> { "" | x ( "," x)* }
-
-ParamValue { Identifier ( "=" expression)? }
-ParamList { commaSep<ParamValue>  }
-FuncDef { functionKwd openParen ParamList closeParen !funbody expression }
-
-ifExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
-
-repeatExpr { repeatKwd nlsok !repeat expression }
-whileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
-forExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
-
-ControlExpr {
-  ifExpr | repeatExpr | whileExpr | forExpr
-}
-
 infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
 
+
 @tokens {
+  Comment { "#" ![\n]* }
+
   spaces[@export]  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
   newline[@export]  { $[\r\n\u2028\u2029] }
   eof { @eof }
   identifierChar { @asciiLetter }
-
-  @precedence { spaces, newline, identifierChar }
 
   simpleName {
     ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
@@ -165,6 +143,8 @@ infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     '"' ( ![\\\n"] | '\\' '"' )*  '"' |
     "'" ( ![\\\n'] | "\\" "'" )*  "'"
   }
+
+  backtickName { "`" ![\n]* "`" }
 
   Logical { "TRUE" | "FALSE" }
 
@@ -178,10 +158,6 @@ infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   Integer { number "L" }
 
   Complex { number "i" }
-
-  backtickName { "`" ![\n]* "`" }
-
-  Comment { "#" ![\n]* }
   
   infix0 { "%%" }
   infix1 { "%" ![%] "%" }
@@ -193,27 +169,6 @@ infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
   infix7 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
   infix8 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
   infix9 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
-
-  openBrace[@export] { "{" }
-  closeBrace[@export] { "}" }
-  openBrack[@export, @name="[" ] { "[" }
-  closeBrack[@export, @name="]"] { "]" }
-  openDBrack[@export, @name="[[" ] { "[[" }
-  closeDBrack[@export, @name="]]"] { "]]" }
-  openParen[@export] { "(" }
-  closeParen[@export] { ")" }
-
-  ":"
-  "::" ":::"
-  "$" "@"
-  "*" "/"
-  "+" "-"
-  "^"
-  "!"
-  "~"
-  "<" ">" ">=" "<=" "==" "!="
-  "&" "&&" "|" "||"
-  "<-" "<<-" "->" "->>" "="
 
   @precedence {
     infix0
@@ -229,35 +184,65 @@ infix { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| i
     backtickName,
     Logical,
     Character,
-    Complex,
     Integer,
+    Complex,
     Numeric,
-    simpleName,
-    ":::",
-    "::",
-    ":",
-    "<<-",
-    "<-",
-    "->>",
-    "->",
-    "<=",
-    ">=",
-    "==",
-    "<",
-    ">",
-    "=",
-    "&&",
-    "||",
-    "&",
-    "|",
-    openDBrack,
-    "[",
-    closeDBrack,
-    closeBrack
+    simpleName
   }
+
+  openBrace[@export] { "{" }
+  closeBrace[@export] { "}" }
+  openBrack[@export, @name="[" ] { "[" }
+  closeBrack[@export, @name="]"] { "]" }
+  openDBrack[@export, @name="[[" ] { "[[" }
+  closeDBrack[@export, @name="]]"] { "]]" }
+  openParen[@export] { "(" }
+  closeParen[@export] { ")" }
+
+  ":::" "::" ":"
+  "$" "@"
+  "*" "/"
+  "+" "-"
+  "^"
+  "!"
+  "~"
+  "<" ">" ">=" "<=" "==" "!="
+  "&" "&&" "|" "||"
+  "<-" "<<-" "->" "->>" "="
+
+  @precedence {
+    openDBrack, openBrack
+  }
+
+  @precedence {
+    closeDBrack, closeBrack
+  }
+
+  @precedence {
+    ":::", "::", ":"
+  }
+
+  @precedence {
+    "<=", "<<-", "<-", "<"
+  }
+
+  @precedence {
+    ">=", "->>", "->", ">"
+  }
+
+  @precedence {
+    "==", ">=", "<=", "="
+  }
+
+  @precedence {
+    "||" "|"
+  }
+
+  @precedence {
+    "&&" "&"
+  }
+
 }
 
-@context trackDelims from "./tokens.js"
-@external specialize {newline} replaceNewline from "./tokens" { hnl snl }
 
 
