@@ -1,97 +1,132 @@
-dotsKwd { kw<"..."> }
-dots1Kwd { kw<"..1"> }
-dots2Kwd { kw<"..2"> }
-dots3Kwd { kw<"..3"> }
-dots4Kwd { kw<"..4"> }
-dots5Kwd { kw<"..5"> }
-dots6Kwd { kw<"..6"> }
-dots7Kwd { kw<"..7"> }
-dots8Kwd { kw<"..8"> }
-dots9Kwd { kw<"..9"> }
-DotNum { dots1Kwd | dots2Kwd |  dots3Kwd | dots4Kwd | dots5Kwd | dots6Kwd | dots7Kwd | dots8Kwd | dots9Kwd }
+| ControlExpr | IndexExpr |
+    StdCall | FuncDef |
 
-@top Script { expression* }
 
-@skip { space | newLine | LineComment }
+EmptyArg { ~emptyvalue }
+ArgValue { ~emptyvalue ( Identifier "=" )? expression }
+ArgList { 
+  ( ArgValue | EmptyArg ) ( "," ( ArgValue | EmptyArg) )*  
+}
+StdCall { expression !funcall openParen ArgList closeParen }
 
-@precedence {
-  Assignment @right
+IndexExpr {
+  expression !index openBrack ArgList closeBrack |
+  expression !index openDBrack ArgList closeDBrack
 }
 
-expression {
-  literal |
-  symbol |
-  call |
-  Block { "{" expression* "}" }
+commaSep<x> { "" | x ( "," x)* }
+
+ParamValue { Identifier ( "=" expression)? }
+ParamList { commaSep<ParamValue>  }
+FuncDef { functionKwd openParen ParamList closeParen !funbody expression }
+
+ifExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
+
+repeatExpr { repeatKwd nlsok !repeat expression }
+whileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
+forExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
+
+ControlExpr {
+  ifExpr | repeatExpr | whileExpr | forExpr
 }
 
-@tokens {
-  space { @whitespace+ }
 
-  Identifier {
-    @asciiLetter+ |
-    (@asciiLetter | "_")+ ( @asciiLetter | @digit | "." | "_")* |
-    "." ( @asciiLetter | "_")? ( @asciiLetter | @digit | "." | "_")* |
-    ".." ![0-9] ( @asciiLetter | @digit | "." | "_")* |
-    "..." ( @asciiLetter | @digit | "." | "_")+ |
-  }
 
-  String { 
-    '"' (!["\\] | "\\" _)* '"' 
-    "'" (!['\\] | '\\' _)* "'"
-    }
+ifExpr { ifKwd newline* openParen newline* expression ( () | newline+ ) closeParen newline* !if expression }
 
-  Boolean { "TRUE" | "FALSE" }
+repeatExpr { repeatKwd newline* !repeat expression }
+whileExpr { whileKwd newline* openParen nlsok expression ( () | newline+ ) closeParen newline* !while expression }
 
-  Numeric {
-    @digit |
-    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? |
-    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? |
-    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+
-  }
-
-  Integer {
-    @digit+ "."? "L" |
-    "0" $[xX] $[0-9a-fA-F]+ "L" |
-    @digit+ (("e" | "E") ("+" | "-")? @digit+)? "L"
-  }
-
-  Complex {
-    @digit+ "i" |
-    @digit+ "."? @digit* (("e" | "E") ("+" | "-")? @digit+)? "i" |
-    @digit* "." @digit+ (("e" | "E") ("+" | "-")? @digit+)? "i" |
-    "0" $[xX] $[0-9a-fA-F]* ("." $[0-9a-fA-F]*)? $[pP] ("+" | "-")? @digit+ "i"
-  }
-
-  LineComment { "#" ![\n]* }
-
-  "(" ")"
-
-  "<-" [@name=AssignOp,@export]
-
-  @precedence { space newline AssignOp}
+ControlExpr {
+  ifExpr | repeatExpr | whileExpr
 }
 
-literal { String | Boolean | Numeric | Complex | Integer }
 
-operator { AssignOp }
 
-symbol { Identifier | operator }
 
-Assignment { expression "<-" expression }
-StdCall { Symbol ArgList}
-FunctionDef { "function" ParamList expression}
+#########################################################
+## from before
+#########################################################
+
+UnclosedParenExpr { 
+  ~parencheck 
+  openParen nlsok  
+  ( semiTermExpr | !exprnl nlTermExpr | eofTermExpr | braceTermExpr | closeBrace | eof ) 
+}
+
+
+UnaryExpr {
+    !sign ArithOp< "+" | "-" > nlsok expression | 
+    !not LogicOp< "!" > nlsok expression |
+    !frmla GenOp< "~" > nlsok expression 
+}
+
+BinaryExpr { 
+    expression !seq nlsok GenOp< ":" > nlsok expression |
+    expression !times nlsok ArithOp< "*" | "/" > nlsok expression |
+    expression !plus nlsok ArithOp< "+" | "-" > nlsok expression |
+    expression !exp nlsok ArithOp< "^" > nlsok expression |
+    expression !infix nlsok GenOp< infix > nlsok expression |
+    expression !comp nlsok CompOp< "<" | ">" | ">=" | "<=" | "==" | "!=" > nlsok expression |
+    expression !and nlsok LogicOp< "&" | "&&" > nlsok expression |
+    expression !or nlsok LogicOp< "|" | "||" > nlsok expression |
+    expression !lassign nlsok AssignOp< "<-" | "<<-" > nlsok expression |
+    expression !rassign nlsok AssignOp< "->" | "->>" > nlsok expression |
+    expression !frmla nlsok GenOp< "~" > nlsok expression | 
+    expression !compon nlsok GenOp< "$" | "@" > nlsok ( Identifier | Character ) |
+    Identifier !member nlsok GenOp< "::" | ":::" > nlsok Identifier
+}
+
+BinaryExpr { 
+    expression !seq newline* GenOp< ":" > nlsok expression |
+    expression !times newline* ArithOp< "*" | "/" > nlsok expression |
+    expression !plus newline* ArithOp< "+" | "-" > nlsok expression |
+    expression !exp newline* ArithOp< "^" > nlsok expression |
+    expression !infix newline* GenOp< infix > nlsok expression |
+    expression !comp newline* CompOp< "<" | ">" | ">=" | "<=" | "==" | "!=" > nlsok expression |
+    expression !and newline* LogicOp< "&" | "&&" > nlsok expression |
+    expression !or newline* LogicOp< "|" | "||" > nlsok expression |
+    expression !lassign newline* AssignOp< "<-" | "<<-" > nlsok expression |
+    expression !rassign newline* AssignOp< "->" | "->>" > nlsok expression |
+    expression !frmla newline* GenOp< "~" > nlsok expression | 
+    expression !compon newline* GenOp< "$" | "@" > nlsok ( Identifier | Character ) |
+    Identifier !member newline* GenOp< "::" | ":::" > nlsok Identifier
+}
+
+
+
+EmptyArg { ~emptyvalue }
+ArgValue { ~emptyvalue ( Identifier "=" )? expression }
+ArgList { 
+  ( ArgValue | EmptyArg ) ( "," ( ArgValue | EmptyArg) )*  
+}
+StdCall { expression !funcall openParen ArgList closeParen }
+
+IndexExpr {
+  expression !index openBrack ArgList closeBrack |
+  expression !index openDBrack ArgList closeDBrack
+}
+
+commaSep<x> { "" | x ( "," x)* }
+
+ParamValue { Identifier ( "=" expression)? }
+ParamList { commaSep<ParamValue>  }
+FuncDef { functionKwd openParen ParamList closeParen !funbody expression }
+
+ifExpr { ifKwd nlsok openParen nlsok expression  nlsok closeParen nlsok !if expression ( !else elseKwd nlsok expression)? } 
+
+repeatExpr { repeatKwd nlsok !repeat expression }
+whileExpr { whileKwd nlsok openParen nlsok expression nlsok closeParen nlsok !while expression }
+whileExpr { whileKwd nlsok ParenExpr nlsok !while expression }
+forExpr { forKwd nlsok openParen nlsok Identifier nlsok inKwd nlsok !in expression nlsok ")" nlsok !for expression }
+
+ControlExpr {
+  ifExpr | repeatExpr | whileExpr | forExpr
+}
+
 
 call {
-  Assignment | StdCall | FunctionDef
+    UnaryExpr | BinaryExpr| ControlExpr | IndexExpr |
+    StdCall | FuncDef |
+    Block | ParenExpr
 }
-
-kw<term> { @specialize[@name={term}]<Symbol, term> }
-
-commaSep<x> { "" | x ("," x)* }
-
-ParamList { "(" commaSep< ((Identifier "=" )? expression)* > ")" }
-
-ArgList { "(" commaSep< ((Identifier "=" )? expression)* > ")" }
-
-@detectDelim

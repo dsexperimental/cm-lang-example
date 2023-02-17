@@ -20,11 +20,12 @@ Identifier {
   simpleName | backtickName   
 }
 
+
 @top Script { newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? | eof )  }
 
 
 ParenExpr { 
-  openParen newline* expression newline* closeParen
+  openParen newline* expression ( () | newline+ ) closeParen
 }
 
 
@@ -33,8 +34,8 @@ UnaryExpr {
 }
 
 BinaryExpr { 
-    expression newline* !times ArithOp<"*"> newline* expression |
-    expression newline* !plus ArithOp<"+"> newline* expression 
+    expression ( () | newline+ ) !times ArithOp<"*"> newline* expression |
+    expression ( () | newline+ ) !plus ArithOp<"+"> newline* expression 
 }
 
 ArithOp<op> { op }

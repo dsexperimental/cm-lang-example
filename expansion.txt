@@ -1,0 +1,62 @@
+
+
+script =
+( 
+	(
+		expression ";" 
+		| 
+		!exprterm expression newline 
+		| 
+		newline 
+	)* 
+	( 
+		expression eof
+		|
+		eof
+	)
+)
+
+
+
+
+
+
+################################
+expression = 
+
+(
+	literal 
+	| 
+	Identifier 
+	|
+	!sign ArithOp< "+" | "-" > nlsok expression
+	| 
+	!not LogicOp< "!" > nlsok expression					
+	|
+	expression !seq GenOp< ":" > nlsok expression
+	|
+	!exprcont expression newline nlsok !seq GenOp< ":" > nlsok expression
+	|
+	expression !times ArithOp< "*" | "/" > nlsok expression
+	|
+	!exprcont expression newline nlsok !times ArithOp< "*" | "/" > nlsok expression
+	|
+	expression !plus ArithOp< "+" | "-" > nlsok expression
+	| 
+	!exprcont expression newline nlsok !plus ArithOp< "+" | "-" > nlsok expression
+	|
+	expression !exp ArithOp< "^" > nlsok expression
+	| !exprcont expression newline nlsok !exp ArithOp< "^" > nlsok expression
+	|
+	expression !infix GenOp< infix > nlsok expression
+	| 
+	!exprcont expression newline nlsok !infix GenOp< infix > nlsok expression
+	|
+	ifKwd nlsok openParen nlsok ( expression | !exprcont exprNl nlsok ) closeParen nlsok ( ifEnding | elseEnding ) 						
+	|
+	repeatKwd nlsok !repeat expression 
+	| 
+	whileKwd nlsok openParen nlsok ( expression | !exprcont exprNl nlsok ) closeParen nlsok !while expression 
+	| 
+	forKwd nlsok openParen nlsok ( Identifier | !exprcont Identifier newline nlsok ) inKwd nlsok !in ( expression | !exprcont expression newline nlsok ) closeParen nlsok !for expression 
+)
