@@ -1,15 +1,41 @@
 @precedence {
-  exprterm,
-  exprcont,
-  sign @left,
+  exprterm @left,
+  exprx @left,
+  member @left,
+  compon @left,
+  index @left,
+  funcall @left,
+  exp @left,
+  sign @right,
+  seq @left,
+  infix @left,
   times @left,
-  plus @left
+  plus @left,
+  comp @left,
+  not @left,
+  and @left,
+  or @left,
+  frmla @left,
+  rassign @left,
+  lassign @right,
+  eqassign @right,
+  if,
+  else @right,
+  repeat,
+  while,
+  for,
+  in,
+  funbody,
+  paren,
+  block,
+  help,
+  label
 }
 
-@skip { spaces | Comment  }
+@skip { spaces | Comment }
 
 expression {
-   literal | Identifier | UnaryExpr | BinaryExpr | ParenExpr 
+   literal | Identifier | UnaryExpr | BinaryExpr | ParenExpr | ControlExpr | callExpr | Block 
 }
 
 literal { 
@@ -20,8 +46,9 @@ Identifier {
   simpleName | backtickName   
 }
 
-@top Script { newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? | eof )  }
+@top Script { newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? eof )  }
 
+Block { openBrace newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? closeBrace ) }
 
 ParenExpr { 
   openParen newline* expression newline* closeParen
@@ -29,27 +56,95 @@ ParenExpr {
 
 
 UnaryExpr {
-  !sign ArithOp<"+"> newline* expression
+  !sign ArithOp< "+" | "-" > newline* expression | 
+  !not LogicOp< "!" > newline* expression |
+  !frmla GenOp< "~" > newline* expression  | 
+  !help GenOp< "?" > newline* expression
 }
 
-BinaryExpr { 
-    expression newline* !times ArithOp<"*"> newline* expression |
-    expression newline* !plus ArithOp<"+"> newline* expression 
+BinaryExpr {    
+    expression !seq GenOp< ":" > newline* expression |
+    expression !times ArithOp< "*" | "/" > newline* expression |
+    expression !plus ArithOp< "+" | "-" > newline* expression |
+    expression !exp ArithOp< "^" > newline* expression |
+    expression !infix GenOp<infix> newline* expression |
+    expression !comp CompOp< "<" | ">" | ">=" | "<=" | "==" | "!=" > newline* expression |
+    expression !and LogicOp< "&" | "&&" > newline* expression |
+    expression !or LogicOp< "|" | "||" > newline* expression |
+    expression !lassign AssignOp< "<-" | "<<-" > newline* expression |
+    expression !rassign AssignOp< "->" | "->>" > newline* expression |
+    expression !eqassign equalsAssignOp newline* expression |
+    expression !frmla GenOp< "~" > newline* expression | 
+    expression !compon GenOp< "$" | "@" > newline* ( Identifier | Character ) |
+    Identifier !member GenOp< "::" | ":::" > newline* Identifier
 }
 
 ArithOp<op> { op }
+CompOp<op> { op }
+LogicOp<op> { op }
+AssignOp<op> { op }
+equalsAssignOp[@name="AssignOp"] { equalSign }
+GenOp<op> { op }
+
+ifExpr { ifKwd newline* openParen newline* expression newline* closeParen newline* expression ifEnding }
+
+ifEnding { 
+  ~ifelse ()
+  |
+  ~ifelse newline* elseKwd newline* !else expression  
+}
+
+repeatExpr { repeatKwd newline* !repeat expression }
+whileExpr { whileKwd newline* openParen newline* expression newline* closeParen newline* !while expression }
+forExpr { forKwd newline* openParen newline* Identifier newline* inKwd newline* !in expression closeParen newline* !for expression }
+
+ControlExpr {
+  ifExpr | repeatExpr | whileExpr | forExpr
+}
+
+EmptyArg { () }
+plainArgValue[@name="ArgValue"] { expression ~args newline*  }
+labeledArgValue[@name="ArgValue",@dynamicPrecedence=1] { Identifier ~args newline* !label equalSign newline* expression newline* }
+argValue { EmptyArg | plainArgValue | labeledArgValue }
+ArgList { 
+  argValue ( "," newline* argValue )*
+}
+
+StdCall { expression newline* !funcall openParen newline* ArgList closeParen }
+
+IndexExpr {
+  expression newline* !index openBrack newline* ArgList closeBrack |
+  expression newline* !index openDBrack newline* ArgList closeDBrack
+}
+
+commaSep<x> { "" | x ( "," newline* x)* }
+
+ParamValue { Identifier newline* ( equalSign newline* expression newline* )? }
+ParamList { commaSep<ParamValue>  }
+FuncDef { functionKwd newline* openParen newline* ParamList closeParen newline* !funbody expression }
+
+callExpr {
+  StdCall | IndexExpr | FuncDef
+}
+
+kw<term> { @specialize[@name={term}]<simpleName, term> }
+
+ifKwd { kw<"if"> }
+elseKwd { kw<"else"> }
+repeatKwd { kw<"repeat"> }
+whileKwd[@export] { kw<"while"> }
+functionKwd[@export] { kw<"function"> }
+forKwd[@export] { kw<"for"> }
+inKwd { kw<"in"> }
+
+infix[@name="INFIX"] { infix0 | infix1 | infix2 | infix3 | infix4 | infix5 | infix6 | infix7| infix8 | infix9 }
 
 @tokens {
-  spaces[@export]  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
-  newline[@export]  { $[\r\n\u2028\u2029] }
+  spaces  { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
+  newline  { $[\r\n\u2028\u2029] }
   eof { @eof }
+
   identifierChar { @asciiLetter }
-
-  simpleName {
-    ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
-  }
-
-  backtickName { "`" ![\n]* "`" }
 
   Character {
     '"' ( ![\\\n"] | '\\' '"' )*  '"' |
@@ -68,6 +163,12 @@ ArithOp<op> { op }
   Integer { number "L" }
 
   Complex { number "i" }
+
+  simpleName {
+    ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
+  }
+
+  backtickName { "`" ![\n]* "`" }
 
   infix0 { "%%" }
   infix1 { "%" ![%] "%" }
@@ -102,13 +203,54 @@ ArithOp<op> { op }
 
   Comment { "#" ![\n]* }
 
-  openParen[@export] { "(" }
-  closeParen[@export] { ")" }
+  openBrace { "{" }
+  closeBrace { "}" }
+  openBrack[ @name="[" ] { "[" }
+  closeBrack[@name="]"] { "]" }
+  openDBrack[@name="[[" ] { "[[" }
+  closeDBrack[@name="]]"] { "]]" }
+  openParen { "(" }
+  closeParen { ")" }
 
-  "*"
-  "+"
+  equalSign[@name="="] { "=" }
+
+  "*" "/" "+" "-" "^"
+  "<" ">" ">=" "<=" "==" "!="
+  "!" "&" "&&" "|" "||"
+  "<<-" "<-" "->>" "->" 
+  ":" "::" ":::" "$" "@" "~" "?"
+
+  @precedence {
+    openDBrack
+    openBrack
+    closeDBrack
+    closeBrack
+  }
+
+  @precedence {
+    ":::" "::" ":"
+  }
+
+  @precedence {
+    "<<-" "<-" "<=" "<" "-" 
+  }
+
+  @precedence {
+   "->>" "->" ">=" ">" "-"
+  }
+
+  @precedence {
+    "==" ">=" "<=" "!=" equalSign
+  }
+
+  @precedence {
+    "&&" "&"
+  }
+
+  @precedence {
+    "||" "|"
+  }
 
 }
-
 
 

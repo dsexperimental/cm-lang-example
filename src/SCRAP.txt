@@ -1,3 +1,170 @@
+commaSep<x> { "" | x ( "," x)* }
+
+ParamValue { Identifier ( "=" expression)? }
+ParamList { commaSep<ParamValue>  }
+FuncDef { functionKwd openParen ParamList closeParen !funbody expression }
+
+
+
+
+
+| ControlExpr 
+
+ifExpr { ifKwd newline* openParen newline* expression newline* closeParen newline* !if expression }
+
+elseOption { expression !else newline* !else elseKwd newline* expression }
+
+repeatExpr { repeatKwd newline* !repeat expression }
+
+ControlExpr {
+  ifExpr | repeatExpr | elseOption
+}
+
+
+ifKwd { "if" }
+elseKwd { "else" }
+repeatKwd { "repeat" }
+
+ | Comment
+
+  Comment { "#" ![\n]* }
+
+==============
+
+
+ifExpr { !ifelse ifKwd newline* openParen newline* expression newline* closeParen newline* !if expression }
+
+elseOption { expression !else2 newline* !else elseKwd newline* expression }
+
+repeatExpr { repeatKwd newline* !repeat expression }
+
+ControlExpr {
+  ifExpr | repeatExpr | elseOption
+}
+
+
+| Integer | Logical | Complex
+
+    Logical,
+
+    Complex,
+    Integer,
+
+     Logical { "TRUE" | "FALSE" }
+
+     
+  Integer { number "L" }
+
+  Complex { number "i" }
+
+
+  simpleName {
+    ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
+  }
+
+
+  @precedence {
+
+    Numeric,
+    simpleName
+  }
+
+
+  identifierChar { @asciiLetter }
+
+ 
+repeatKwd { kw<"repeat"> }
+
+# 2/17/23
+
+functionKwd[@export] { kw<"function"> }
+
+
+repeatKwd { kw<"repeat"> }
+whileKwd[@export] { kw<"while"> }
+forKwd[@export] { kw<"for"> }
+inKwd { kw<"in"> }
+
+ openBrace[@export] { "{" }
+  closeBrace[@export] { "}" }
+
+ifExpr { ifKwd newline* openParen newline* expression newline* closeParen !if newline* expression ( ( ";" | ";"? newline+ ) elseKwd newline* !else expression )?  }
+
+  
+
+repeatExpr { repeatKwd newline* !repeat expression }
+whileExpr { whileKwd newline* openParen newline* expression newline* closeParen newline* !while expression }
+forExpr { forKwd newline* openParen newline* Identifier newline* inKwd newline* !in expression newline* closeParen newline* !for expression }
+
+Character | 
+
+ Identifier |
+
+Identifier { 
+  simpleName | backtickName   
+}
+
+  | repeatExpr | whileExpr | forExpr
+  
+  
+  Block { openBrace newline* !block ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? closeBrace ) }
+
+  
+   | Block
+
+
+
+
+   simpleName {
+    ( identifierChar | "." ) ( ( identifierChar | "." | "_" ) ( identifierChar | @digit | "." | "_" )* )?
+  }
+
+
+  backtickName { "`" ![\n]* "`" }
+
+  Character {
+    '"' ( ![\\\n"] | '\\' '"' )*  '"' |
+    "'" ( ![\\\n'] | "\\" "'" )*  "'"
+  }
+
+
+  infix0 { "%%" }
+  infix1 { "%" ![%] "%" }
+  infix2 { "%" ![%] ![%] "%" }
+  infix3 { "%" ![%] ![%] ![%]  "%" }
+  infix4 { "%" ![%] ![%] ![%] ![%] "%" }
+  infix5 { "%" ![%] ![%] ![%] ![%] ![%] "%" }
+  infix6 { "%" ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix7 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix8 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+  infix9 { "%" ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] ![%] "%" }
+
+
+    infix0
+    infix1,
+    infix2,
+    infix3,
+    infix4,
+    infix5,
+    infix6,
+    infix7,
+    infix8,
+    infix9,
+
+    backtickName,
+
+    Character,
+
+    ,
+    simpleName
+
+
+
+    expression newline* !times ArithOp<"*"> newline* expression |
+    expression newline* !plus ArithOp<"+"> newline* expression 
+
+
+######################################################
 | ControlExpr | IndexExpr |
     StdCall | FuncDef |
 

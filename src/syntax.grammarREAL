@@ -115,10 +115,13 @@ LogicOp<op> { op }
 AssignOp<op> { op }
 GenOp<op> { op }
 
-ifExpr { ifKwd nlsok openParen nlsok expressionPre closeParen nlsok ( ifEnding | elseEnding ) }
+ifExpr { ifKwd nlsok openParen nlsok expressionPre closeParen nlsok expression ifEnding }
 
-ifEnding { ~ifelse !if expression }
-elseEnding[@dynamicPrecedence=1] { ~ifelse (expression | expression !exprsup newline nlsok ) elseKwd nlsok !else expression }
+ifEnding { 
+  ~ifelse
+  |
+  ~ifelse newlines* elseKwd newlines* !else expression  
+}
 
 repeatExpr { repeatKwd nlsok !repeat expression }
 whileExpr { whileKwd nlsok openParen nlsok expressionPre closeParen nlsok !while expression }
