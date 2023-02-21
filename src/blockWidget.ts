@@ -62,7 +62,7 @@ export const images = (): Extension => {
                     blockDepth: blockDepth
                     
                 })
-                parsedDocument += extra + node.name
+                parsedDocument += extra + node.name + `[${node.from},${node.to}]`
             }
         })
 
