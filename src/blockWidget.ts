@@ -11,21 +11,75 @@ export const images = (): Extension => {
     const decorate = (state: EditorState) => {
         const widgets: Range<Decoration>[] = []
 
-        console.log("---------------------")
-        let stack: number[] = []
+        let stack: any[] = []
         let prevTo = 0
+        let parsedDocument = ""
         syntaxTree(state).iterate({
             enter: (node) => {
-                let inBetween = state.doc.sliceString(prevTo, node.from)
-                 if(inBetween.indexOf("\n") >= 0) console.log("NEWLINE")
+                let extra = ""
                 prevTo = node.to
 
-                while(stack.length > 0 && stack[stack.length - 1] <= node.from) stack.pop()
-                let indent = "   ".repeat(stack.length)
-                stack.push(node.to)
-                console.log(`${indent}${node.name} from ${node.from} to ${node.to}`)
+                while(stack.length > 0 && stack[stack.length - 1].to < node.to) {
+                    let previous = stack[stack.length-1]
+                    if(previous.childCount > 0) {
+                        extra += ")"           
+                    }
+                    if([/*"Cell","SEndCell","BEndCell",*/"Block","Script"].indexOf(previous.name) >= 0) {
+                        extra += "\n" + "    ".repeat(previous.blockDepth)
+                    }
+                    stack.pop()
+                }
+
+                let blockDepth
+                if(stack.length > 0) {
+                    let parent = stack[stack.length-1]
+                    if(parent.childCount == 0) {
+                        extra += "(" // first child, add paren
+                    }
+                        
+                    if((parent.name == "Script")||(parent.name == "Block")) {
+                        //increment block depth and add a newline 
+                        blockDepth = parent.blockDepth + 1
+                        extra += "\n" + "    ".repeat(blockDepth)
+                    }
+                    else {
+                        blockDepth = parent.blockDepth
+                        if(parent.childCount > 0) {
+                            extra += ","
+                        }
+                    }
+
+                    parent.childCount += 1
+                }
+                else {
+                    blockDepth = 0
+                }
+
+                stack.push({
+                    to: node.to,
+                    childCount: 0,
+                    name: node.name,
+                    blockDepth: blockDepth
+                    
+                })
+                parsedDocument += extra + node.name
             }
         })
+
+        while(stack.length > 0) {
+            let parent = stack[stack.length-1]
+            if([/*"Cell","SEndCell","BEndCell",*/"Block","Script"].indexOf(parent.name) >= 0) {
+                parsedDocument += "\n" + "    ".repeat(parent.blockDepth)
+            }
+            if(parent.childCount > 0) {
+                parsedDocument += ")" 
+            }
+            stack.pop()
+        }
+
+        console.log(">--------------------")
+        console.log(parsedDocument)
+        console.log("--------------------<")
 
         return widgets.length > 0 ? RangeSet.of(widgets) : Decoration.none
     }
@@ -49,45 +103,3 @@ export const images = (): Extension => {
         imagesField,
     ]
 }
-
-  
-/*
-export const checkboxPlugin = ViewPlugin.fromClass(class {
-    decorations: DecorationSet
-
-    constructor(view: EditorView) {
-        this.decorations = checkboxes(view)
-    }
-
-    update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged)
-            this.decorations = checkboxes(update.view)
-    }
-}, {
-    decorations: v => v.decorations,
-
-    eventHandlers: {
-        mousedown: (e, view) => {
-            let target = e.target as HTMLElement
-            if (target.nodeName == "INPUT" &&
-                target.parentElement!.classList.contains("cm-boolean-toggle"))
-                return toggleBoolean(view, view.posAtDOM(target))
-        }
-    }
-})
-
-function toggleBoolean(view: EditorView, pos: number) {
-    let before = view.state.doc.sliceString(Math.max(0, pos - 5), pos)
-    let change
-    if (before == "false")
-        change = { from: pos - 5, to: pos, insert: "true" }
-    else if (before.endsWith("true"))
-        change = { from: pos - 4, to: pos, insert: "false" }
-    else
-        return false
-    view.dispatch({ changes: change })
-    return true
-}
-
-*/
-  

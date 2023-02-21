@@ -46,9 +46,13 @@ Identifier {
   simpleName | backtickName   
 }
 
-@top Script { newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? eof )  }
+Cell { ( expression ( ";" | ";"? newline+ ) !exprterm ) }
+SEndCell { expression eof}
+BEndCell { expression closeBrace}
 
-Block { openBrace newline* ( expression ( ";" | ";"? newline+ ) !exprterm )* ( expression? closeBrace ) }
+@top Script { newline* Cell* ( SEndCell | eof )  }
+
+Block { openBrace newline* Cell* ( BEndCell | closeBrace ) }
 
 ParenExpr { 
   openParen newline* expression newline* closeParen
